@@ -16,8 +16,8 @@ module.exports = (app) => {
     app.get('/posts', async (req, res) => {
         try {
             const { sort: reqQuery, limit, skip } = req.query;
-            const skipNumber = parseInt(skip);
-            const limitNumber = parseInt(limit);
+            const skipNum = +req.query.skip || 0;
+            const limitNum = +req.query.limit || posts.length;
             let postsFiltered = [];
 
             const response = await fetch(`https://jsonplaceholder.typicode.com/posts`);
@@ -30,15 +30,8 @@ module.exports = (app) => {
                 }
             }
             if (req.query.skip || req.query.limit) {
-                if (!req.query.skip) {
-                    postsFiltered = posts.slice(0, limitNumber);
-                }
-                else if (!req.query.limit) {
-                    postsFiltered = posts.slice(skipNumber);
-                }
-                else {
-                    postsFiltered = posts.slice(skipNumber, skipNumber + limitNumber);
-                }
+                postsFiltered = posts.slice(skipNum, skipNum + limitNum);
+
                 return res.status(200).json(postsFiltered);
             }
 
