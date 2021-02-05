@@ -1,31 +1,48 @@
 const fetch = require("node-fetch");
 
+const sortComparator = (reqQuery) => (post1, post2) => {
+    const key = reqQuery.replace(/^-/, '');
+
+    if (typeof(post1[key]) === "string") {
+        return post1[key].localeCompare(post2[key]);
+    } else if (typeof(post1[key]) === "number") {
+        return post1[key] - post2[key];
+    }
+
+    return 0;
+}
+
 module.exports = (app) => {
     app.get('/posts', async (req, res) => {
         try {
-            const { sort: reqQuery } = req.query;
+            const { sort: reqQuery, limit, skip } = req.query;
+            const skipNumber = parseInt(skip);
+            const limitNumber = parseInt(limit);
+            let postsFiltered = [];
 
             const response = await fetch(`https://jsonplaceholder.typicode.com/posts`);
             const posts = await response.json();
 
-            if (reqQuery === undefined) {
-                return res.status(200).json(posts);
-            } else {
-                let postsSorted = posts.sort((post1, post2) => {
-                    const key = reqQuery.replace(/^-/, '');
-                    if (typeof(post1[key]) === "string") {
-                        return post1[key].localeCompare(post2[key]);
-                    } else if (typeof(post1[key]) === "number") {
-                        return post1[key] - post2[key];
-                    }
-                    return 0;
-                })
-                if (reqQuery.startsWith('-')) {
-                    postsSorted = postsSorted.reverse();
+            if (req.query.sort) {
+                posts.sort(sortComparator(reqQuery));
+                if (reqQuery.startsWith('-')){
+                    posts.reverse();
                 }
-
-                return res.status(200).send(postsSorted);
             }
+            if (req.query.skip || req.query.limit) {
+                if (!req.query.skip) {
+                    postsFiltered = posts.slice(0, limitNumber);
+                }
+                else if (!req.query.limit) {
+                    postsFiltered = posts.slice(skipNumber);
+                }
+                else {
+                    postsFiltered = posts.slice(skipNumber, skipNumber + limitNumber);
+                }
+                return res.status(200).json(postsFiltered);
+            }
+
+            return res.status(200).json(posts);
         } catch (error) {
             res.status(400).json(error.message);
         }

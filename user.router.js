@@ -1,31 +1,48 @@
 const fetch = require("node-fetch");
 
+const sortComparator = (reqQuery) => (user1, user2) => {
+    const key = reqQuery.replace(/^-/, '');
+
+    if (typeof(user1[key]) === "string") {
+        return user1[key].localeCompare(user2[key]);
+    } else if (typeof(user1[key]) === "number"){
+        return user1[key] - (user2[key]);
+    }
+
+    return 0;
+}
+
 module.exports = (app) => {
     app.get('/users', async (req, res) => {
         try {
-            const { sort: reqQuery } = req.query;
+            const { sort: reqQuery, limit, skip } = req.query;
+            const skipNumber = parseInt(skip);
+            const limitNumber = parseInt(limit);
+            let usersFiltered = [];
 
             const response = await fetch(`https://jsonplaceholder.typicode.com/users`);
             const users = await response.json();
 
-            if (reqQuery === undefined) {
-                return res.status(200).json(users);
-            } else {
-                let usersSorted = users.sort((user1, user2) => {
-                    const key = reqQuery.replace(/^-/, '');
-                    if (typeof(user1[key]) === "string") {
-                        return user1[key].localeCompare(user2[key]);
-                    } else if (typeof(user1[key]) === "number"){
-                        return user1[key] - (user2[key]);
-                    }
-                    return 0;
-                })
+            if (req.query.sort) {
+                users.sort(sortComparator(reqQuery));
                 if (reqQuery.startsWith('-')) {
-                    usersSorted = usersSorted.reverse();
+                    users.reverse();
                 }
-
-                return res.status(200).json(usersSorted);
             }
+            if (req.query.skip || req.query.limit) {
+                if (!req.query.skip) {
+                    usersFiltered = users.slice(0, limitNumber);
+                }
+                else if (!req.query.limit) {
+                    usersFiltered = users.slice(skipNumber);
+                }
+                else {
+                    usersFiltered = users.slice(skipNumber, skipNumber + limitNumber);
+                }
+                return res.status(200).json(usersFiltered);
+            }
+
+            return res.status(200).json(users);
         } catch (error) {
             res.status(400).json(error.message);
         }
