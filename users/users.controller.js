@@ -12,7 +12,7 @@ module.exports = {
     },
     getSingleUser: async (req, res) => {
         try {
-            const user = await service.getSingleUser(req.params.userId);
+            const user = await service.getSingleUser(req.params.userId, req.query);
 
             if (!user) {
                 return res.status(404).send({ message: "User Not Found" });

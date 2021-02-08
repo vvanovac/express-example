@@ -1,5 +1,5 @@
 const request = require('../common/request');
-const { reqFilter } = require('../common/common.funtions');
+const { reqFilter, fieldsFilter } = require('../common/common.funtions');
 
 module.exports = {
     getAllUsers: async (query) => {
@@ -7,13 +7,13 @@ module.exports = {
 
         return reqFilter(users, query);
     },
-    getSingleUser: async (id) => {
+    getSingleUser: async (id, query) => {
         const user = await request.get(`/users/${id}`);
 
         if (Object.keys(user).length === 0) {
             return null;
         }
-        return user;
+        return fieldsFilter(user, query.fields);
     },
     postUser: async (body) => {
         return await request.post(`/users`, body);
