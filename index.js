@@ -1,8 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 
-const userRouter = require('./user.router');
-const postRouter = require('./posts.router');
+const userRouter = require('./users/users.router');
+const postRouter = require('./posts/posts.router');
 
 const app = express();
 
