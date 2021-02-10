@@ -1,13 +1,13 @@
-const controller = require('./posts.controller');
+const postsController = require('./posts.controller');
 
 module.exports = (app) => {
-    app.get('/posts', controller.getAllPosts);
+  app.get('/posts', postsController.getAllPosts);
 
-    app.get('/posts/:postId', controller.getSinglePost);
+  app.get('/posts/:postId', postsController.getSinglePost);
 
-    app.post('/posts', controller.postPost);
+  app.post('/posts', postsController.postPost);
 
-    app.put('/posts/:postId', controller.putPost);
+  app.put('/posts/:postId', postsController.putPost);
 
-    app.delete('/posts/:postId', controller.deletePost);
+  app.delete('/posts/:postId', postsController.deletePost);
 };
