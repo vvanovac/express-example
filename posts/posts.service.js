@@ -28,31 +28,47 @@ module.exports = {
     const { fields } = query || {};
 
     if (Object.keys(post).length === 0) {
-      return null;
+      throw new Error('Post Not Found');
     }
     return fieldsFilter(post, fields);
   },
   postPost: async (body) => {
     const { userId, title } = body;
+    const user = await userService.getSingleUser(userId);
 
+    if (!user) {
+      throw new Error('User Not Found');
+    }
     if (!userId) {
-      return null;
+      throw new Error('User Not Found');
     }
     if (!title) {
-      return null;
+      throw new Error('Bad Request');
     }
     return request.post('/posts', body);
   },
-  putPost: async (id, body) => {
+  async putPost(id, body) {
     const { userId } = body;
+    const post = await this.getSinglePost(id);
+
+    if (!post) {
+      throw new Error('Post Not Found');
+    }
     if (userId) {
       const user = await userService.getSingleUser(userId);
 
       if (!user) {
-        return null;
+        throw new Error('User Not Found');
       }
     }
     return request.put(`/posts/${id}`, body);
   },
-  deletePost: async (id) => request.delete(`/posts/${id}`),
+  async deletePost(id) {
+    const post = this.getSinglePost(id);
+
+    if (!post) {
+      throw new Error('Post Not Found');
+    }
+    return request.delete(`/posts/${id}`)
+  },
 };

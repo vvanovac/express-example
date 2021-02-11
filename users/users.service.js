@@ -12,7 +12,7 @@ module.exports = {
     const { fields } = query || {};
 
     if (Object.keys(user).length === 0) {
-      return null;
+      throw new Error('User Not Found');
     }
     return fieldsFilter(user, fields);
   },
@@ -25,13 +25,27 @@ module.exports = {
     const { username, email } = body;
 
     if (!username) {
-      return null;
+      throw new Error('Bad Request');
     }
     if (!email) {
-      return null;
+      throw new Error('Bad Request');
     }
     return request.post('/users', body);
   },
-  putUser: async (id, body) => request.put(`/users/${id}`, body),
-  deleteUser: async (id) => request.delete(`/posts/${id}`),
+  async putUser(id, body) {
+    const user = await this.getSingleUser(id);
+
+    if (!user) {
+      throw new Error('User Not Found');
+    }
+    return request.put(`/users/${id}`, body)
+  },
+  async deleteUser(id) {
+    const user = this.getSingleUser(id);
+
+    if (!user) {
+      throw new Error("User Not Found");
+    }
+    return request.delete(`/users/${id}`)
+  }
 };
