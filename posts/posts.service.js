@@ -69,6 +69,6 @@ module.exports = {
     if (!post) {
       throw new Error('Post Not Found');
     }
-    return request.delete(`/posts/${id}`)
+    return request.delete(`/posts/${id}`);
   },
 };

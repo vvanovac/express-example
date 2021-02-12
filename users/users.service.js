@@ -38,14 +38,14 @@ module.exports = {
     if (!user) {
       throw new Error('User Not Found');
     }
-    return request.put(`/users/${id}`, body)
+    return request.put(`/users/${id}`, body);
   },
   async deleteUser(id) {
     const user = this.getSingleUser(id);
 
     if (!user) {
-      throw new Error("User Not Found");
+      throw new Error('User Not Found');
     }
-    return request.delete(`/users/${id}`)
-  }
+    return request.delete(`/users/${id}`);
+  },
 };

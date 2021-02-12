@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-const hash = process.env.JWT_HASH;
+const { hash } = require('../common/constants');
 
 // just for this example, hardcoding list of users
 const validUsers = [
@@ -12,7 +11,7 @@ const validUsers = [
 ];
 
 module.exports = {
-  loginUser: (username, password) => {
+  loginUser: ({ username, password }) => {
     const validUser = validUsers.find((user) => user.username === username && user.password === password);
 
     if (!validUser) {
@@ -20,13 +19,7 @@ module.exports = {
     }
 
     const user = { username };
-    const token = jwt.sign(user, hash, { expiresIn: '1h' });
-
-    if (!token) {
-      throw new Error('Invalid Token');
-    }
-
-    return token;
+    return jwt.sign(user, hash, { expiresIn: '1h' });
   },
   verifyToken: (token = '') => jwt.verify(token.split(' ')[1], hash),
 };
