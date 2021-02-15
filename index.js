@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const authController = require('./authentication/auth.controller');
+const authRouter = require('./authentication/auth.router');
 const userRouter = require('./users/users.router');
 const postRouter = require('./posts/posts.router');
 const { port } = require('./common/constants');
@@ -12,10 +12,7 @@ const app = express();
 
 app.use(bodyParser.json());
 
-app.post('/login', authController.login);
-
-app.use(authController.verifyToken);
-
+authRouter(app);
 userRouter(app);
 postRouter(app);
 

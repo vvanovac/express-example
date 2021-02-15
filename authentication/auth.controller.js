@@ -28,4 +28,15 @@ module.exports = {
       return res.status(401).send({ message: error.message });
     }
   },
+  register: async (req, res) => {
+    try {
+      const user = await authService.registerUser(req.body);
+      if (!user) {
+        return res.status(400).send({ message: 'Bad Request' });
+      }
+      return res.status(200).send({ message: 'Registration completed.' });
+    } catch (error) {
+      return res.status(400).send({ message: error.message });
+    }
+  },
 };
