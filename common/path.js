@@ -9,7 +9,7 @@ module.exports = {
       const folder = path.split('/').slice(0, -1).join('/');
 
       if (!fs.existsSync(folder)) {
-        fs.mkdirSync(folder);
+        fs.mkdirSync(folder, { recursive: true });
       }
       fs.writeFileSync(path, '[]');
     }
