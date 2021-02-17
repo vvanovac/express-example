@@ -3,8 +3,10 @@ const fs = require('fs');
 const { sortComparator } = require('./common.funtions');
 const requirePath = require('./path');
 
+/*eslint-disable*/
 const users = require(requirePath.choosePath('users'));
 const posts = require(requirePath.choosePath('posts'));
+/* eslint-enable */
 
 const tables = { users, posts };
 
@@ -14,6 +16,9 @@ class Requesting {
   }
 
   find(query = {}) {
+    if (!query || Object.keys(query).length === 0) {
+      return this;
+    }
     this.executingTable = this.executingTable
       .filter((table) => Object.entries(query).every(([key, value]) => table[key] === value));
 
@@ -27,16 +32,12 @@ class Requesting {
 
     this.executingTable = this.executingTable.find((table) => table.id === id);
 
-    if (!this.executingTable) {
-      throw new Error('Not Found');
-    }
-
     return this;
   }
 
   sort(criteria) {
     if (!criteria) {
-      throw new Error('Bad Request');
+      return this;
     }
     this.executingTable = this.executingTable.sort(sortComparator(criteria));
 
@@ -47,6 +48,9 @@ class Requesting {
   }
 
   skip(skip) {
+    if (!skip) {
+      return this;
+    }
     const number = +skip || 0;
     this.executingTable = this.executingTable.slice(number);
 
@@ -54,8 +58,22 @@ class Requesting {
   }
 
   limit(limit) {
+    if (!limit) {
+      return this;
+    }
     const number = +limit || this.executingTable.length;
     this.executingTable = this.executingTable.slice(0, number);
+
+    return this;
+  }
+
+  select(fields) {
+    if (!fields) {
+      return this;
+    }
+    const keys = fields.split(',');
+
+    this.executingTable = this.executingTable.map((elem) => Object.fromEntries(keys.map((key) => [key, elem[key]])));
 
     return this;
   }

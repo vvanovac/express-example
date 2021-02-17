@@ -1,14 +1,16 @@
 const request = require('../common/request');
 const { reqFilter, fieldsFilter } = require('../common/common.funtions');
 const userService = require('../users/users.service');
+const LocalService = require('../common/local.service');
 
 module.exports = {
   getAllPosts: async (query) => {
-    const posts = await request.get('/posts');
+    // const posts = await request.get('/posts');
+    const posts = await new LocalService('posts').find().exec();
 
     const userIds = posts.map((post) => post.userId);
     const userIdsUnique = userIds.filter((id, index) => userIds.indexOf(id) === index);
-    const someUsers = await userService.getUsersById(userIdsUnique);
+    const someUsers = await userService.getUsersById(userIdsUnique); // promijeniti
 
     return reqFilter(posts, query).map((post) => {
       const { userId, ...restOfPosts } = post;
