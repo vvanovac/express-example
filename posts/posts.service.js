@@ -1,18 +1,25 @@
-const request = require('../common/request');
-const { reqFilter, fieldsFilter } = require('../common/common.funtions');
 const userService = require('../users/users.service');
 const LocalService = require('../common/local.service');
 
 module.exports = {
   getAllPosts: async (query) => {
-    // const posts = await request.get('/posts');
-    const posts = await new LocalService('posts').find().exec();
+    const {
+      sort, skip, limit, fields, ...searchQuery
+    } = query;
+
+    const posts = await new LocalService('posts')
+      .find(searchQuery)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .select(fields)
+      .exec();
 
     const userIds = posts.map((post) => post.userId);
     const userIdsUnique = userIds.filter((id, index) => userIds.indexOf(id) === index);
-    const someUsers = await userService.getUsersById(userIdsUnique); // promijeniti
+    const someUsers = await userService.getUsersById(userIdsUnique);
 
-    return reqFilter(posts, query).map((post) => {
+    return posts.map((post) => {
       const { userId, ...restOfPosts } = post;
 
       if (userId) {
@@ -25,52 +32,68 @@ module.exports = {
       return restOfPosts;
     });
   },
-  getSinglePost: async (id, query = {}) => {
-    const post = await request.get(`/posts/${id}`);
-    const { fields } = query || {};
+  getSinglePost: async (id) => {
+    const post = await new LocalService('posts')
+      .findOne(+id)
+      .exec();
 
-    if (Object.keys(post).length === 0) {
+    if (!post) {
       throw new Error('Post Not Found');
     }
-    return fieldsFilter(post, fields);
+    return post;
   },
   postPost: async (body) => {
     const { userId, title } = body;
-    const user = await userService.getSingleUser(userId);
+    const user = await new LocalService('users')
+      .findOne(+userId)
+      .exec();
 
     if (!user) {
       throw new Error('User Not Found');
     }
     if (!userId) {
-      throw new Error('User Not Found');
+      throw new Error('Bad Request');
     }
     if (!title) {
       throw new Error('Bad Request');
     }
-    return request.post('/posts', body);
+    return new LocalService('posts')
+      .create(body)
+      .exec();
   },
   async putPost(id, body) {
     const { userId } = body;
-    const post = await this.getSinglePost(id);
+    const post = await new LocalService('posts')
+      .findOne(+id)
+      .exec();
+    const user = await new LocalService('users')
+      .findOne(+userId)
+      .exec();
 
     if (!post) {
       throw new Error('Post Not Found');
     }
-    if (userId) {
-      const user = await userService.getSingleUser(userId);
-
-      if (!user) {
-        throw new Error('User Not Found');
-      }
+    if (!userId) {
+      throw new Error('Bad Request');
     }
-    return request.put(`/posts/${id}`, body);
+    if (!user) {
+      throw new Error('User Not Found');
+    }
+
+    return new LocalService('posts')
+      .update(+id, body)
+      .exec();
   },
   async deletePost(id) {
-    const post = this.getSinglePost(id);
+    const post = await new LocalService('posts')
+      .findOne(+id)
+      .exec();
 
     if (!post) {
       throw new Error('Post Not Found');
     }
-    return request.delete(`/posts/${id}`);
+    return new LocalService('posts')
+      .delete(+id)
+      .exec();
   },
 };

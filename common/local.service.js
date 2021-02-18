@@ -13,6 +13,7 @@ const tables = { users, posts };
 class Requesting {
   constructor(table) {
     this.executingTable = tables[table];
+    this.table = table;
   }
 
   find(query = {}) {
@@ -79,17 +80,19 @@ class Requesting {
   }
 
   create(data) {
-    const { username, email } = data;
+    if (this.table === 'users') {
+      this.executingTable.push({ ...data, id: this.executingTable.length + 1 });
 
-    const userExists = this.executingTable.find((exist) => exist.username === username || exist.email === email);
-    if (userExists) {
-      throw new Error('User already exists.');
+      const path = requirePath.choosePath(this.table);
+      fs.writeFileSync(path, JSON.stringify(users));
     }
 
-    this.executingTable.push({ ...data, id: this.executingTable.length + 1 });
+    if (this.table === 'posts') {
+      this.executingTable.push({ ...data, id: this.executingTable.length + 1 });
 
-    const path = requirePath.choosePath('users');
-    fs.writeFileSync(path, JSON.stringify(users));
+      const path = requirePath.choosePath(this.table);
+      fs.writeFileSync(path, JSON.stringify(posts));
+    }
 
     return this;
   }

@@ -1,4 +1,3 @@
-const request = require('../common/request');
 const LocalService = require('../common/local.service');
 
 module.exports = {
@@ -27,7 +26,9 @@ module.exports = {
     return user;
   },
   getUsersById: async (ids) => {
-    const users = await request.get('/users');
+    const users = await new LocalService('users')
+      .find()
+      .exec();
 
     return users.filter((user) => ids.includes(user.id));
   },
@@ -39,6 +40,16 @@ module.exports = {
     }
     if (!email) {
       throw new Error('Bad Request');
+    }
+
+    const users = await new LocalService('users')
+      .find()
+      .exec();
+
+    const userExists = users.find((exist) => exist.username === username || exist.email === email);
+
+    if (userExists) {
+      throw new Error('User already exists.');
     }
 
     return new LocalService('users')
