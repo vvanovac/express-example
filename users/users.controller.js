@@ -39,7 +39,7 @@ module.exports = {
   },
   deleteUser: async (req, res) => {
     try {
-      const user = await userService.getSingleUser(req.params.userId);
+      const user = await userService.deleteUser(req.params.userId);
 
       return res.status(200).json(user);
     } catch (error) {

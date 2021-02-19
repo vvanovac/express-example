@@ -61,7 +61,7 @@ module.exports = {
       .create(body)
       .exec();
   },
-  async putPost(id, body) {
+  putPost: async (id, body) => {
     const { userId } = body;
     const post = await new LocalService('posts')
       .findOne(+id)
@@ -84,7 +84,7 @@ module.exports = {
       .update(+id, body)
       .exec();
   },
-  async deletePost(id) {
+  deletePost: async (id) => {
     const post = await new LocalService('posts')
       .findOne(+id)
       .exec();

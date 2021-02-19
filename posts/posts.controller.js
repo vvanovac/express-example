@@ -39,7 +39,7 @@ module.exports = {
   },
   deletePost: async (req, res) => {
     try {
-      const post = await postService.getSinglePost(req.params.postId);
+      const post = await postService.deletePost(req.params.postId);
 
       return res.status(200).json(post);
     } catch (error) {

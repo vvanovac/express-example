@@ -56,7 +56,7 @@ module.exports = {
       .create(body)
       .exec();
   },
-  async putUser(id, body) {
+  putUser: async (id, body) => {
     const user = await new LocalService('users')
       .findOne(+id)
       .exec();
@@ -69,10 +69,13 @@ module.exports = {
       .update(+id, body)
       .exec();
   },
-  async deleteUser(id) {
+  deleteUser: async (id) => {
+    console.log("checkpoint")
     const user = await new LocalService('users')
       .findOne(+id)
       .exec();
+
+    console.log('user');
 
     if (!user) {
       throw new Error('User Not Found');
