@@ -12,7 +12,7 @@ const tables = { users, posts };
 
 class Requesting {
   constructor(table) {
-    this.executingTable = tables[table];
+    this.executingFunction = {};
     this.table = table;
   }
 
@@ -20,8 +20,9 @@ class Requesting {
     if (!query || Object.keys(query).length === 0) {
       return this;
     }
-    this.executingTable = this.executingTable
-      .filter((table) => Object.entries(query).every(([key, value]) => table[key] === value));
+
+    this.executingFunction.query = query;
+    this.executingFunction.function = 'filter';
 
     return this;
   }
@@ -31,7 +32,8 @@ class Requesting {
       throw new Error('Bad Request');
     }
 
-    this.executingTable = this.executingTable.find((table) => table.id === id);
+    this.executingFunction.query = { id };
+    this.executingFunction.function = 'find';
 
     return this;
   }
@@ -40,11 +42,9 @@ class Requesting {
     if (!criteria) {
       return this;
     }
-    this.executingTable = this.executingTable.sort(sortComparator(criteria));
 
-    if (criteria.startsWith('-')) {
-      this.executingTable = this.executingTable.reverse();
-    }
+    this.executingFunction.sort = criteria;
+
     return this;
   }
 
@@ -52,8 +52,8 @@ class Requesting {
     if (!skip) {
       return this;
     }
-    const number = +skip || 0;
-    this.executingTable = this.executingTable.slice(number);
+
+    this.executingFunction.skip = skip;
 
     return this;
   }
@@ -62,8 +62,8 @@ class Requesting {
     if (!limit) {
       return this;
     }
-    const number = +limit || this.executingTable.length;
-    this.executingTable = this.executingTable.slice(0, number);
+
+    this.executingFunction.limit = limit;
 
     return this;
   }
@@ -72,39 +72,34 @@ class Requesting {
     if (!fields) {
       return this;
     }
-    const keys = fields.split(',');
 
-    this.executingTable = this.executingTable.map((elem) => Object.fromEntries(keys.map((key) => [key, elem[key]])));
+    this.executingFunction.select = fields;
 
     return this;
   }
 
   create(data) {
-    if (this.table === 'users') {
-      this.executingTable.push({ ...data, id: this.executingTable.length + 1 });
+    const table = tables[this.table];
+    table.push({ ...data, id: table.length + 1 });
 
-      const path = requirePath.choosePath(this.table);
-      fs.writeFileSync(path, JSON.stringify(users));
-    }
-
-    if (this.table === 'posts') {
-      this.executingTable.push({ ...data, id: this.executingTable.length + 1 });
-
-      const path = requirePath.choosePath(this.table);
-      fs.writeFileSync(path, JSON.stringify(posts));
-    }
+    const path = requirePath.choosePath(this.table);
+    fs.writeFileSync(path, JSON.stringify(table));
 
     return this;
   }
 
   delete(id) {
-    this.executingTable = this.executingTable.filter((table) => table.id !== id);
+    const newTableData = tables[this.table].filter((table) => table.id !== id);
+    tables[this.table] = newTableData;
+
+    const path = requirePath.choosePath(this.table);
+    fs.writeFileSync(path, JSON.stringify(newTableData));
 
     return this;
   }
 
   update(id, data) {
-    this.executingTable = this.executingTable.map((table) => {
+    tables[this.table] = tables[this.table].map((table) => {
       if (table.id === id) {
         return data;
       }
@@ -114,7 +109,36 @@ class Requesting {
   }
 
   async exec() {
-    return this.executingTable;
+    let table = JSON.parse(JSON.stringify(tables[this.table]));
+
+    // find
+    if (this.executingFunction.function) {
+      table = table[this.executingFunction.function]((tab) => Object.entries(this.executingFunction.query)
+        .every(([key, value]) => tab[key] === value));
+    }
+    // sort
+    if (this.executingFunction.sort) {
+      table = table.sort(sortComparator(this.executingFunction.sort));
+
+      if (this.executingFunction.sort.startsWith('-')) {
+        table = table.reverse();
+      }
+    }
+    // skip and limit
+    if (this.executingFunction.limit || this.executingFunction.skip) {
+      const skipNum = +this.executingFunction.skip || 0;
+      const limitNum = +this.executingFunction.limit || table.length;
+
+      table = table.slice(skipNum, skipNum + limitNum);
+    }
+    // select
+    if (this.executingFunction.select) {
+      const keys = this.executingFunction.select.split(',');
+
+      table = table.map((elem) => Object.fromEntries(keys.map((key) => [key, elem[key]])));
+    }
+
+    return table;
   }
 }
 

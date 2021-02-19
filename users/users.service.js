@@ -52,9 +52,11 @@ module.exports = {
       throw new Error('User already exists.');
     }
 
-    return new LocalService('users')
+    await new LocalService('users')
       .create(body)
       .exec();
+
+    return body;
   },
   putUser: async (id, body) => {
     const user = await new LocalService('users')
@@ -65,24 +67,25 @@ module.exports = {
       throw new Error('User Not Found');
     }
 
-    return new LocalService('users')
+    await new LocalService('users')
       .update(+id, body)
       .exec();
+
+    return body;
   },
   deleteUser: async (id) => {
-    console.log("checkpoint")
     const user = await new LocalService('users')
       .findOne(+id)
       .exec();
-
-    console.log('user');
 
     if (!user) {
       throw new Error('User Not Found');
     }
 
-    return new LocalService('users')
+    await new LocalService('users')
       .delete(+id)
       .exec();
+
+    return user;
   },
 };

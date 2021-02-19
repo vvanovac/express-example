@@ -57,9 +57,11 @@ module.exports = {
     if (!title) {
       throw new Error('Bad Request');
     }
-    return new LocalService('posts')
+    await new LocalService('posts')
       .create(body)
       .exec();
+
+    return body;
   },
   putPost: async (id, body) => {
     const { userId } = body;
@@ -80,9 +82,11 @@ module.exports = {
       throw new Error('User Not Found');
     }
 
-    return new LocalService('posts')
+    await new LocalService('posts')
       .update(+id, body)
       .exec();
+
+    return body;
   },
   deletePost: async (id) => {
     const post = await new LocalService('posts')
@@ -92,8 +96,10 @@ module.exports = {
     if (!post) {
       throw new Error('Post Not Found');
     }
-    return new LocalService('posts')
+    await new LocalService('posts')
       .delete(+id)
       .exec();
+
+    return post;
   },
 };
