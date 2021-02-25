@@ -2,21 +2,27 @@ const jwt = require('jsonwebtoken');
 
 const { hash } = require('../common/constants');
 const LocalService = require('../common/local.service');
-const usersData = require('../data/users.json');
+const cryptography = require('../common/cryptography');
 
 module.exports = {
-  loginUser: ({ username, password }) => {
-    const validUser = usersData.find((exist) => exist.username === username && exist.password === password);
+  loginUser: async ({ username, password }) => {
+    const [validUser] = await new LocalService('users').find({ username }).exec();
 
     if (!validUser) {
       throw new Error('Login failed. Invalid Username and/or Password');
     }
-    const user = { username };
+
+    const validPassword = await cryptography.comparePasswords(password, validUser.salt, validUser.hash);
+    if (!validPassword) {
+      throw new Error('Login failed. Invalid Username and/or Password');
+    }
+
+    const user = { username, id: validUser.id };
     return jwt.sign(user, hash, { expiresIn: '1y' });
   },
   verifyToken: (token = '') => jwt.verify(token.split(' ')[1], hash),
   registerUser: async (user) => {
-    const users = await new LocalService('users').exec();
+    await new LocalService('users').exec();
     const {
       id, username, email, password,
     } = user;
@@ -36,13 +42,15 @@ module.exports = {
       throw new Error('Please do not enter id.');
     }
 
-    const userExists = users.find((exist) => exist.username === username || exist.email === email);
-    if (userExists) {
+    const userExists = await new LocalService('users').find({ username, email }).exec();
+    if (userExists.length > 0) {
       throw new Error('User already exists.');
     }
 
-    await new LocalService('users').create(user).exec();
+    const result = await cryptography.hashPassword(password);
 
-    return user;
+    delete user.password;
+
+    return new LocalService('users').create({ ...user, ...result });
   },
 };

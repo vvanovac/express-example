@@ -13,6 +13,7 @@ module.exports = {
       .skip(skip)
       .limit(limit)
       .select(fields)
+      // .join('users', 'id', 'creator')
       .exec();
 
     const userIds = posts.map((post) => post.userId);
@@ -58,8 +59,7 @@ module.exports = {
       throw new Error('Bad Request');
     }
     await new LocalService('posts')
-      .create(body)
-      .exec();
+      .create(body);
 
     return body;
   },
@@ -82,11 +82,8 @@ module.exports = {
       throw new Error('User Not Found');
     }
 
-    await new LocalService('posts')
-      .update(+id, body)
-      .exec();
-
-    return body;
+    return new LocalService('posts')
+      .update(+id, body);
   },
   deletePost: async (id) => {
     const post = await new LocalService('posts')
@@ -97,8 +94,7 @@ module.exports = {
       throw new Error('Post Not Found');
     }
     await new LocalService('posts')
-      .delete(+id)
-      .exec();
+      .delete(+id);
 
     return post;
   },

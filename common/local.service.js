@@ -1,19 +1,14 @@
-const fs = require('fs');
-
-const { sortComparator } = require('./common.funtions');
-const requirePath = require('./path');
-
-/*eslint-disable*/
-const users = require(requirePath.choosePath('users'));
-const posts = require(requirePath.choosePath('posts'));
-/* eslint-enable */
-
-const tables = { users, posts };
+let connection = null;
 
 class Requesting {
   constructor(table) {
     this.executingFunction = {};
     this.table = table;
+  }
+
+  static setConnection(databaseConnection) {
+    connection = databaseConnection;
+    return connection;
   }
 
   find(query = {}) {
@@ -73,72 +68,71 @@ class Requesting {
       return this;
     }
 
-    this.executingFunction.select = fields;
+    this.executingFunction.select = fields.split(',');
+
+    return this;
+  }
+
+  join(table, pk, fk) {
+    this.executingFunction.join = { table, pk, fk };
 
     return this;
   }
 
   create(data) {
-    const table = tables[this.table];
-    table.push({ ...data, id: table.length + 1 });
-
-    const path = requirePath.choosePath(this.table);
-    fs.writeFileSync(path, JSON.stringify(table));
-
-    return this;
+    return connection
+      .insert(data)
+      .into(this.table);
   }
 
   delete(id) {
-    const newTableData = tables[this.table].filter((table) => table.id !== id);
-    tables[this.table] = newTableData;
-
-    const path = requirePath.choosePath(this.table);
-    fs.writeFileSync(path, JSON.stringify(newTableData));
-
-    return this;
+    return connection(this.table)
+      .where({ id })
+      .del();
   }
 
   update(id, data) {
-    tables[this.table] = tables[this.table].map((table) => {
-      if (table.id === id) {
-        return data;
-      }
-      return table;
-    });
-    return this;
+    return connection(this.table)
+      .update(data)
+      .where({ id });
   }
 
   async exec() {
-    let table = JSON.parse(JSON.stringify(tables[this.table]));
+    const con = connection
+      .select(this.executingFunction.select || '*')
+      .from(this.table);
 
     // find
     if (this.executingFunction.function) {
-      table = table[this.executingFunction.function]((tab) => Object.entries(this.executingFunction.query)
-        .every(([key, value]) => tab[key] === value));
+      con.where(this.executingFunction.query);
     }
+
     // sort
     if (this.executingFunction.sort) {
-      table = table.sort(sortComparator(this.executingFunction.sort));
-
       if (this.executingFunction.sort.startsWith('-')) {
-        table = table.reverse();
+        this.executingFunction.sort = this.executingFunction.sort.slice(1);
+        con.orderBy(this.executingFunction.sort, 'desc');
       }
+      con.orderBy(this.executingFunction.sort);
     }
+
     // skip and limit
     if (this.executingFunction.limit || this.executingFunction.skip) {
-      const skipNum = +this.executingFunction.skip || 0;
-      const limitNum = +this.executingFunction.limit || table.length;
-
-      table = table.slice(skipNum, skipNum + limitNum);
-    }
-    // select
-    if (this.executingFunction.select) {
-      const keys = this.executingFunction.select.split(',');
-
-      table = table.map((elem) => Object.fromEntries(keys.map((key) => [key, elem[key]])));
+      con.limit(this.executingFunction.limit).offset(this.executingFunction.skip);
     }
 
-    return table;
+    if (this.executingFunction.join) {
+      con.innerJoin(this.executingFunction.join.table,
+        `${this.table}.${this.executingFunction.join.fk}`,
+        `${this.executingFunction.join.table}.${this.executingFunction.join.pk}`);
+    }
+
+    return con.then((values) => {
+      if (this.executingFunction.function === 'find') {
+        return values[0];
+      }
+      return values;
+    });
   }
 }
 

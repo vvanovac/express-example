@@ -1,4 +1,5 @@
 const LocalService = require('../common/local.service');
+const cryptography = require('../common/cryptography');
 
 module.exports = {
   getAllUsers: async (query = {}) => {
@@ -6,13 +7,21 @@ module.exports = {
       sort, skip, limit, fields, ...searchQuery
     } = query;
 
-    return new LocalService('users')
+    const users = await new LocalService('users')
       .find(searchQuery)
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .select(fields)
+      // .join('address', 'id', 'address' )
       .exec();
+
+    users.find((user) => {
+      delete user.hash;
+      delete user.salt;
+    });
+
+    return users;
   },
   getSingleUser: async (id) => {
     const user = await new LocalService('users')
@@ -21,6 +30,11 @@ module.exports = {
 
     if (!user) {
       throw new Error('User Not Found');
+    }
+
+    if (user.hash || user.salt) {
+      delete user.hash;
+      delete user.salt;
     }
 
     return user;
@@ -33,7 +47,7 @@ module.exports = {
     return users.filter((user) => ids.includes(user.id));
   },
   postUser: async (body) => {
-    const { username, email } = body;
+    const { username, email, password } = body;
 
     if (!username) {
       throw new Error('Bad Request');
@@ -42,19 +56,17 @@ module.exports = {
       throw new Error('Bad Request');
     }
 
-    const users = await new LocalService('users')
-      .find()
-      .exec();
-
-    const userExists = users.find((exist) => exist.username === username || exist.email === email);
-
-    if (userExists) {
+    const userExists = await new LocalService('users').find({ username, email }).exec();
+    if (userExists.length > 0) {
       throw new Error('User already exists.');
     }
 
+    const result = await cryptography.hashPassword(password);
+
+    delete body.password;
+
     await new LocalService('users')
-      .create(body)
-      .exec();
+      .create({ ...body, ...result });
 
     return body;
   },
@@ -67,11 +79,12 @@ module.exports = {
       throw new Error('User Not Found');
     }
 
-    await new LocalService('users')
-      .update(+id, body)
-      .exec();
+    if (body.password) {
+      console.log('contains password');
+    }
 
-    return body;
+    return new LocalService('users')
+      .update(+id, body);
   },
   deleteUser: async (id) => {
     const user = await new LocalService('users')
@@ -83,8 +96,10 @@ module.exports = {
     }
 
     await new LocalService('users')
-      .delete(+id)
-      .exec();
+      .delete(+id);
+
+    delete user.hash;
+    delete user.salt;
 
     return user;
   },
