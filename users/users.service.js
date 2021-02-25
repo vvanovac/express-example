@@ -1,5 +1,6 @@
 const LocalService = require('../common/local.service');
 const cryptography = require('../common/cryptography');
+const messages = require('../common/message.constants');
 
 module.exports = {
   getAllUsers: async (query = {}) => {
@@ -16,12 +17,7 @@ module.exports = {
       // .join('address', 'id', 'address' )
       .exec();
 
-    users.find((user) => {
-      delete user.hash;
-      delete user.salt;
-    });
-
-    return users;
+    return users.map(({ hash, salt, ...rest }) => rest);
   },
   getSingleUser: async (id) => {
     const user = await new LocalService('users')
@@ -29,13 +25,12 @@ module.exports = {
       .exec();
 
     if (!user) {
-      throw new Error('User Not Found');
+      throw new Error(messages.USER_NOT_FOUND);
     }
 
-    delete user.hash;
-    delete user.salt;
+    const { hash, salt, ...rest } = user;
 
-    return user;
+    return rest;
   },
   getUsersById: async (ids) => {
     const users = await new LocalService('users')
@@ -45,77 +40,74 @@ module.exports = {
     return users.filter((user) => ids.includes(user.id));
   },
   postUser: async (body) => {
-    const { username, email, password } = body;
+    const {
+      username, email, password, ...rest
+    } = body;
 
     if (!username) {
-      throw new Error('Bad Request');
+      throw new Error(messages.USERNAME_MISSING);
     }
     if (!email) {
-      throw new Error('Bad Request');
+      throw new Error(messages.EMAIL_MISSING);
     }
     if (!password) {
-      throw new Error('Bad Request');
+      throw new Error(messages.PASSWORD_MISSING);
     }
 
     const userExists = await new LocalService('users').find({ username, email }).exec();
     if (userExists.length > 0) {
-      throw new Error('User already exists.');
+      throw new Error(messages.USER_EXISTS);
     }
 
     if (!cryptography.isValidPasswordFormat(password)) {
-      // eslint-disable-next-line max-len
-      throw new Error('Your password must contain at least 1 uppercase and 1 lowercase character, 1 number and be at least 8 characters long');
+      throw new Error(messages.INCORRECT_PASSWORD_FORMAT);
     }
 
     const result = await cryptography.hashPassword(password);
 
-    delete body.password;
-
     await new LocalService('users')
-      .create({ ...body, ...result });
+      .create({
+        username, email, ...rest, ...result,
+      });
 
-    return body;
+    return { username, email, ...rest };
   },
   putUser: async (id, body) => {
-    const { oldPassword, newPassword } = body;
+    const { oldPassword, newPassword, ...rest } = body;
 
     const user = await new LocalService('users')
       .findOne(+id)
       .exec();
 
     if (!user) {
-      throw new Error('User Not Found');
+      throw new Error(messages.USER_NOT_FOUND);
     }
 
     if (oldPassword && newPassword) {
       const compare = await cryptography.comparePasswords(oldPassword, user.salt, user.hash);
 
       if (!compare) {
-        throw new Error('Old password is incorrect.');
+        throw new Error(messages.INCORRECT_OLD_PASSWORD);
       }
 
       if (compare) {
         const isNewPasswordValid = cryptography.isValidPasswordFormat(newPassword);
 
         if (!isNewPasswordValid) {
-          // eslint-disable-next-line max-len
-          throw new Error('Your new password must contain at least 1 uppercase and 1 lowercase character, 1 number and be at least 8 characters long');
+          throw new Error(messages.INCORRECT_PASSWORD_FORMAT);
         }
 
         const { hash, salt } = await cryptography.hashPassword(newPassword);
 
+        //  eslint-disable-next-line no-param-reassign
         body.hash = hash;
+        //  eslint-disable-next-line no-param-reassign
         body.salt = salt;
       }
     }
 
-    delete body.oldPassword;
-    delete body.newPassword;
-
     return new LocalService('users')
-      .update(+id, body);
-
-    // return body;
+      .update(+id, { ...rest });
   },
   deleteUser: async (id) => {
     const user = await new LocalService('users')
@@ -123,15 +115,14 @@ module.exports = {
       .exec();
 
     if (!user) {
-      throw new Error('User Not Found');
+      throw new Error(messages.USER_NOT_FOUND);
     }
 
     await new LocalService('users')
       .delete(+id);
 
-    delete user.hash;
-    delete user.salt;
+    const { hash, salt, ...rest } = user;
 
-    return user;
+    return rest;
   },
 };

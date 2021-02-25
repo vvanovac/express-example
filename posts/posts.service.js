@@ -1,5 +1,6 @@
 const userService = require('../users/users.service');
 const LocalService = require('../common/local.service');
+const messages = require('../common/message.constants');
 
 module.exports = {
   getAllPosts: async (query) => {
@@ -39,7 +40,7 @@ module.exports = {
       .exec();
 
     if (!post) {
-      throw new Error('Post Not Found');
+      throw new Error(messages.POST_NOT_FOUND);
     }
     return post;
   },
@@ -50,13 +51,13 @@ module.exports = {
       .exec();
 
     if (!user) {
-      throw new Error('User Not Found');
+      throw new Error(messages.USER_NOT_FOUND);
     }
     if (!userId) {
-      throw new Error('Bad Request');
+      throw new Error(messages.CREATOR_MISSING);
     }
     if (!title) {
-      throw new Error('Bad Request');
+      throw new Error(messages.TITLE_MISSING);
     }
     await new LocalService('posts')
       .create(body);
@@ -73,13 +74,13 @@ module.exports = {
       .exec();
 
     if (!post) {
-      throw new Error('Post Not Found');
+      throw new Error(messages.POST_NOT_FOUND);
     }
     if (!userId) {
-      throw new Error('Bad Request');
+      throw new Error(messages.CREATOR_MISSING);
     }
     if (!user) {
-      throw new Error('User Not Found');
+      throw new Error(messages.USER_NOT_FOUND);
     }
 
     return new LocalService('posts')
@@ -91,7 +92,7 @@ module.exports = {
       .exec();
 
     if (!post) {
-      throw new Error('Post Not Found');
+      throw new Error(messages.POST_NOT_FOUND);
     }
     await new LocalService('posts')
       .delete(+id);
