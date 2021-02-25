@@ -73,7 +73,7 @@ class Requesting {
     return this;
   }
 
-  join(table, pk, fk) {
+  join(table, pk, fk) { // pk = primary key; fk = foreign key
     this.executingFunction.join = { table, pk, fk };
 
     return this;

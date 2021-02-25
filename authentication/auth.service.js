@@ -22,10 +22,10 @@ module.exports = {
   },
   verifyToken: (token = '') => jwt.verify(token.split(' ')[1], hash),
   registerUser: async (user) => {
-    await new LocalService('users').exec();
     const {
       id, username, email, password,
     } = user;
+
     if (Object.keys(user).length === 0) {
       throw new Error('Bad Request');
     }
@@ -45,6 +45,11 @@ module.exports = {
     const userExists = await new LocalService('users').find({ username, email }).exec();
     if (userExists.length > 0) {
       throw new Error('User already exists.');
+    }
+
+    if (!cryptography.isValidPasswordFormat(password)) {
+      // eslint-disable-next-line max-len
+      throw new Error('Your password must contain at least 1 uppercase and 1 lowercase character, 1 number and be at least 8 characters long');
     }
 
     const result = await cryptography.hashPassword(password);

@@ -32,10 +32,8 @@ module.exports = {
       throw new Error('User Not Found');
     }
 
-    if (user.hash || user.salt) {
-      delete user.hash;
-      delete user.salt;
-    }
+    delete user.hash;
+    delete user.salt;
 
     return user;
   },
@@ -55,10 +53,18 @@ module.exports = {
     if (!email) {
       throw new Error('Bad Request');
     }
+    if (!password) {
+      throw new Error('Bad Request');
+    }
 
     const userExists = await new LocalService('users').find({ username, email }).exec();
     if (userExists.length > 0) {
       throw new Error('User already exists.');
+    }
+
+    if (!cryptography.isValidPasswordFormat(password)) {
+      // eslint-disable-next-line max-len
+      throw new Error('Your password must contain at least 1 uppercase and 1 lowercase character, 1 number and be at least 8 characters long');
     }
 
     const result = await cryptography.hashPassword(password);
@@ -71,6 +77,8 @@ module.exports = {
     return body;
   },
   putUser: async (id, body) => {
+    const { oldPassword, newPassword } = body;
+
     const user = await new LocalService('users')
       .findOne(+id)
       .exec();
@@ -79,12 +87,35 @@ module.exports = {
       throw new Error('User Not Found');
     }
 
-    if (body.password) {
-      console.log('contains password');
+    if (oldPassword && newPassword) {
+      const compare = await cryptography.comparePasswords(oldPassword, user.salt, user.hash);
+
+      if (!compare) {
+        throw new Error('Old password is incorrect.');
+      }
+
+      if (compare) {
+        const isNewPasswordValid = cryptography.isValidPasswordFormat(newPassword);
+
+        if (!isNewPasswordValid) {
+          // eslint-disable-next-line max-len
+          throw new Error('Your new password must contain at least 1 uppercase and 1 lowercase character, 1 number and be at least 8 characters long');
+        }
+
+        const { hash, salt } = await cryptography.hashPassword(newPassword);
+
+        body.hash = hash;
+        body.salt = salt;
+      }
     }
+
+    delete body.oldPassword;
+    delete body.newPassword;
 
     return new LocalService('users')
       .update(+id, body);
+
+    // return body;
   },
   deleteUser: async (id) => {
     const user = await new LocalService('users')
